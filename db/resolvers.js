@@ -1,8 +1,10 @@
+const { Types } = require('mongoose')
 const bcryptjs = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const User = require("../models/User")
 const Product = require("../models/Product")
 
+const { ObjectId } = Types
 
 const generateToken = (user, secretWord, expiresIn) => {
   const { id, email, name, lastName } = user
@@ -21,6 +23,26 @@ const resolvers = {
         console.log("🚀 ~ getUser: ~ error", error)
         throw error
       }
+    },
+    getProducts: async () => {
+      try{
+        const products = await Product.find({})
+        console.log("🚀 ~ getProducts: ~ products", products)
+        return products
+      } catch(error) {
+        console.log("🚀 ~ getProducts: ~ error", error)
+        throw error
+      }
+    },
+    getProduct: async (_, { id }) => {
+      try{
+        const productExists = await Product.findById(id)
+        if(!productExists) throw new Error('Producto no encontrado')
+        return productExists
+      } catch(error) {
+        console.log("🚀 ~ getProduct: ~ error", error)
+        throw error
+      }
     }
   },
   Mutation: {
@@ -29,7 +51,7 @@ const resolvers = {
         const { email, password } = input
 
         // Validar si ya esta registrado
-        const userExists = await User.findOne({ email }).lean()
+        const userExists = await User.findOne({ email })
         if(userExists) throw new Error('El usuario ya esta registrado')
         
         // Hashear su password
@@ -52,7 +74,6 @@ const resolvers = {
         const { email, password } = input
         const userExists = await User
         .findOne({ email })
-        // .lean()
         if(!userExists) throw new Error('Email o password incorrecto')
 
         // Verificar el password
@@ -77,7 +98,29 @@ const resolvers = {
         console.log("🚀 ~ createProduct: ~ error", error)
         throw error
       }
-    } 
+    },
+    updateProduct: async(_, { id, input }) => {
+      try{
+        let productExists = await Product.findById(id)
+        if(!productExists) throw new Error('Producto no encontrado')        
+        productExists = await Product.findOneAndUpdate({ _id: ObjectId(id) }, input, { new: true })
+        return productExists
+      } catch(error) {
+        console.log("🚀 ~ updateProduct:async ~ error", error)
+        throw error
+      }
+    },
+    deleteProduct: async(_, { id }) => {
+      try{
+        const productExists = await Product.findById(id)
+        if(!productExists) throw new Error('Producto no encontrado')
+        await Product.findOneAndDelete({ _id: ObjectId(id) })
+        return 'Producto eliminado'
+      } catch(error) {
+        console.log("🚀 ~ deleteProduct:async ~ error", error)
+        throw error
+      }
+    }
   }
 }
 

@@ -35,9 +35,9 @@ const typeDefs = gql`
   }
 
   input ProductInput {
-    name: String!
-    stock: Int!
-    price: Float!
+    name: String
+    stock: Int
+    price: Float
   }
 
   type Mutation {
@@ -47,10 +47,17 @@ const typeDefs = gql`
 
     # Products
     createProduct(input: ProductInput!): Product
+    updateProduct(id: ID!, input: ProductInput): Product
+    deleteProduct(id: ID!): String
   }
 
   type Query {
+    # Users
     getUser(token: String!): User
+
+    #Products
+    getProducts: [Product]
+    getProduct(id: ID!): Product 
   }
 `
 
