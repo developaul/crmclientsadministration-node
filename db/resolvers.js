@@ -1,6 +1,7 @@
 const bcryptjs = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const User = require("../models/User")
+const Product = require("../models/Product")
 
 
 const generateToken = (user, secretWord, expiresIn) => {
@@ -10,7 +11,6 @@ const generateToken = (user, secretWord, expiresIn) => {
 
 
 // ctx es un objeto que se comparte con todos los resolvers
-
 const resolvers = {
   Query: {
     getUser: async (_, { token }) => {
@@ -38,7 +38,7 @@ const resolvers = {
         
         // Save 
         const user = new User(input)
-        user.save()
+        await user.save()
 
         return user
       } catch(error) {
@@ -68,7 +68,16 @@ const resolvers = {
         console.log("🚀 ~ authenticateUser: ~ error", error)
         throw error
       }
-    }
+    },
+    createProduct: async (_, { input }) => {
+      try{
+        const newProduct = new Product(input)
+        return await newProduct.save()
+      } catch(error) {
+        console.log("🚀 ~ createProduct: ~ error", error)
+        throw error
+      }
+    } 
   }
 }
 
