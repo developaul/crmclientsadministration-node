@@ -3,6 +3,7 @@ const bcryptjs = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const User = require("../models/User")
 const Product = require("../models/Product")
+const Client = require("../models/Client")
 
 const { ObjectId } = Types
 
@@ -41,6 +42,37 @@ const resolvers = {
         return productExists
       } catch(error) {
         console.log("🚀 ~ getProduct: ~ error", error)
+        throw error
+      }
+    },
+    getClients: async () => {
+      try{
+        return await Client.find({})
+      } catch(error) {
+        console.log("🚀 ~ getClients: ~ error", error)
+        throw error
+      }
+    },
+    getClientsBySeller: async (_, {}, ctx) => {
+      try {
+        const { user } = ctx
+        return await Client.find({ seller: ObjectId(user?.id) })  
+      } catch(error) {
+        console.log("🚀 ~ getClientBySeller: ~ error", error)
+        throw error
+      }
+    },
+    getClient: async (_, { id }, ctx) => {
+      try {
+        const clientExists = await Client.findById(id)
+        if(!clientExists) throw new Error('Cliente no encontrado') 
+
+        const { user } = ctx
+        if(String(clientExists.seller) !== String(user?.id)) throw new Error('No tienes las credenciales')
+
+        return clientExists
+      } catch(error) {
+        console.log("🚀 ~ getClient: ~ error", error)
         throw error
       }
     }
@@ -99,7 +131,7 @@ const resolvers = {
         throw error
       }
     },
-    updateProduct: async(_, { id, input }) => {
+    updateProduct: async (_, { id, input }) => {
       try{
         let productExists = await Product.findById(id)
         if(!productExists) throw new Error('Producto no encontrado')        
@@ -110,7 +142,7 @@ const resolvers = {
         throw error
       }
     },
-    deleteProduct: async(_, { id }) => {
+    deleteProduct: async (_, { id }) => {
       try{
         const productExists = await Product.findById(id)
         if(!productExists) throw new Error('Producto no encontrado')
@@ -118,6 +150,53 @@ const resolvers = {
         return 'Producto eliminado'
       } catch(error) {
         console.log("🚀 ~ deleteProduct:async ~ error", error)
+        throw error
+      }
+    },
+    createClient: async (_, { input }, ctx) => {
+      try {
+        const { user } = ctx
+        const { email } = input
+
+        const clientExists = await Client.findOne({ email })
+        if(clientExists) throw new Error('Ese cliente ya esta registrado')
+
+        input.seller = ObjectId(user?.id)
+        const client = new Client(input)
+
+        return await client.save()
+      } catch(error) {
+        console.log("🚀 ~ createClient:async ~ error", error)
+        throw error
+      }
+    },
+    updateClient: async (_, { id, input }, ctx) => {
+      try {
+        let clientExists = await Client.findById(id)
+        if(!clientExists) throw new Error('Cliente no encontrado')
+
+        const { user } = ctx
+        if(String(clientExists.seller) !== String(user?.id)) throw new Error('No tienes las credenciales')
+
+        clientExists = await Client.findOneAndUpdate({_id: ObjectId(id)}, input, { new: true })
+        return clientExists
+      } catch(error) {
+        console.log("🚀 ~ updateClient: ~ error", error)
+        throw error
+      }
+    },
+    deleteClient: async (_, { id }, ctx) => {
+      try {
+        let clientExists = await Client.findById(id)
+        if(!clientExists) throw new Error('Cliente no encontrado')
+
+        const { user } = ctx
+        if(String(clientExists.seller) !== String(user?.id)) throw new Error('No tienes las credenciales')
+
+        await Client.findOneAndDelete({ _id: ObjectId(id) })
+        return 'Cliente eliminado'
+      } catch (error) {
+        console.log("🚀 ~ deleteClient: ~ error", error)
         throw error
       }
     }
