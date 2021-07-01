@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken')
 const User = require("../models/User")
 const Product = require("../models/Product")
 const Client = require("../models/Client")
+const Order = require('../models/Order')
 
 const { ObjectId } = Types
 
@@ -28,7 +29,6 @@ const resolvers = {
     getProducts: async () => {
       try{
         const products = await Product.find({})
-        console.log("🚀 ~ getProducts: ~ products", products)
         return products
       } catch(error) {
         console.log("🚀 ~ getProducts: ~ error", error)
@@ -197,6 +197,39 @@ const resolvers = {
         return 'Cliente eliminado'
       } catch (error) {
         console.log("🚀 ~ deleteClient: ~ error", error)
+        throw error
+      }
+    },
+    createOrder: async (_, { input }, ctx) => {
+      try {
+        const { client, order } = input
+
+        // Verificar cliente
+        let clientExists = await Client.findById(client)
+        if(!clientExists) throw new Error('Cliente no encontrado')
+
+        // Verificar si el cliente es del vendedor
+        const { user } = ctx
+        if(String(clientExists.seller) !== String(user?.id)) throw new Error('No tienes las credenciales')
+
+        // Verificar si tenemos stock disponible        
+        for await (const article of order) {
+          const { id, quantity } = article
+          const product = await Product.findById(id)
+
+          if(quantity > product.stock) 
+            throw new Error(`El articulo: ${product.name} excede la cantidad disponible`)
+
+          product.stock -= quantity
+          await product.save()
+        }
+
+        // Crear pedido
+        input.seller = user?.id
+        const newOrder = new Order(input)
+        return await newOrder.save()
+      } catch(error) {
+        console.log("🚀 ~ createOrder: ~ error", error)
         throw error
       }
     }
