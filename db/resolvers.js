@@ -75,6 +75,39 @@ const resolvers = {
         console.log("🚀 ~ getClient: ~ error", error)
         throw error
       }
+    },
+    getOrders: async () => {
+      try {
+        const orders = await Order.find({})
+        return orders
+      } catch(error) {
+        console.log("🚀 ~ getOrders: ~ error", error)
+        throw error
+      }
+    },
+    getOrdersBySeller: async (_, {}, ctx) => {
+      try {
+        const { user } = ctx 
+        const orders = await Order.find({ seller: ObjectId(user?.id) })
+        return orders
+      } catch(error) {
+        console.log("🚀 ~ getOrdersBySeller: ~ error", error)
+        throw error
+      }
+    },
+    getOrder: async (_, { id }, ctx) => {
+      try {
+        const orderExists = await Order.findById(id)
+        if(!orderExists) throw new Error('Pedido no encontrado')
+
+        const { user } = ctx
+        if(String(orderExists.seller) !== String(user?.id)) throw new Error('No tienes las credenciales')
+
+        return orderExists
+      } catch(error) {
+        console.log("🚀 ~ getOrder: ~ error", error)
+        throw error
+      }
     }
   },
   Mutation: {

@@ -123,6 +123,9 @@ const typeDefs = gql`
     getClients: [Client]
     getClientsBySeller: [Client]
     getClient(id: ID!): Client
+    getOrders: [Order]
+    getOrdersBySeller: [Order]
+    getOrder(id: ID!): Order
   }
 `
 
