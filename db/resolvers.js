@@ -108,6 +108,20 @@ const resolvers = {
         console.log("🚀 ~ getOrder: ~ error", error)
         throw error
       }
+    },
+    getOrderByStatus: async (_, { status },  ctx) => {
+      try {
+        const { user } = ctx
+        const orders = await Order.find({ 
+          seller: ObjectId(user?.id),
+          status
+        })
+
+        return orders
+      } catch(error) {
+        console.log("🚀 ~ getOrderByStatus: ~ error", error)
+        throw error
+      }
     }
   },
   Mutation: {
@@ -263,6 +277,53 @@ const resolvers = {
         return await newOrder.save()
       } catch(error) {
         console.log("🚀 ~ createOrder: ~ error", error)
+        throw error
+      }
+    },
+    updateOrder: async (_, { id, input }, ctx) => {
+      try {
+        const orderExists = await Order.findById(id)
+        if(!orderExists) throw new Error('Pedido no encontrado')
+
+        const { client, order } = input        
+        const clientExists = await Client.findById(client)
+        if(!clientExists) throw new Error('Cliente no encontrado')
+
+        const { user } = ctx
+        if((String(clientExists.seller) !==  String(user?.id)) || (String(orderExists.seller) !== String(user?.id))) 
+          throw new Error('No tienes las credenciales')
+
+        // Revisar el stock
+        for await (const article of order) {
+          const { id, quantity } = article
+          const product = await Product.findById(id)
+
+          if(quantity > product.stock) 
+            throw new Error(`El articulo: ${product.name} excede la cantidad disponible`)
+
+          product.stock -= quantity
+          await product.save()
+        }
+
+        // Save Order
+        return await Order.findOneAndUpdate({ _id: ObjectId(id) }, input, { new: true })
+      } catch(error) {
+        console.log("🚀 ~ updateOrder: ~ error", error)
+        throw error      
+      }
+    },
+    deleteOrder: async (_, { id }, ctx) => {
+      try {
+        const orderExists = await Order.findById(id)
+        if(!orderExists) throw new Error('Pedido no encontrado')
+
+        const { user } = ctx
+        if(String(order.seller) !== String(user?.id)) throw new Error('No tienes las credenciales')
+
+        await Order.findOneAndDelete({ _id: ObjectId(id) })
+        return 'Pedido eliminado'
+      } catch(error) {
+        console.log("🚀 ~ deleteOrder: ~ error", error)
         throw error
       }
     }
