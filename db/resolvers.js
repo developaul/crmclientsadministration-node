@@ -18,46 +18,46 @@ const generateToken = (user, secretWord, expiresIn) => {
 const resolvers = {
   Query: {
     getUser: async (_, { token }) => {
-      try{
+      try {
         const user = jwt.verify(token, process.env.SECRET_WORD)
         return user
-      } catch(error) {
+      } catch (error) {
         console.log("🚀 ~ getUser: ~ error", error)
         throw error
       }
     },
     getProducts: async () => {
-      try{
+      try {
         const products = await Product.find({})
         return products
-      } catch(error) {
+      } catch (error) {
         console.log("🚀 ~ getProducts: ~ error", error)
         throw error
       }
     },
     getProduct: async (_, { id }) => {
-      try{
+      try {
         const productExists = await Product.findById(id)
-        if(!productExists) throw new Error('Producto no encontrado')
+        if (!productExists) throw new Error('Producto no encontrado')
         return productExists
-      } catch(error) {
+      } catch (error) {
         console.log("🚀 ~ getProduct: ~ error", error)
         throw error
       }
     },
     getClients: async () => {
-      try{
+      try {
         return await Client.find({})
-      } catch(error) {
+      } catch (error) {
         console.log("🚀 ~ getClients: ~ error", error)
         throw error
       }
     },
-    getClientsBySeller: async (_, {}, ctx) => {
+    getClientsBySeller: async (_, { }, ctx) => {
       try {
         const { user } = ctx
-        return await Client.find({ seller: ObjectId(user?.id) })  
-      } catch(error) {
+        return await Client.find({ seller: ObjectId(user?.id) })
+      } catch (error) {
         console.log("🚀 ~ getClientBySeller: ~ error", error)
         throw error
       }
@@ -65,13 +65,13 @@ const resolvers = {
     getClient: async (_, { id }, ctx) => {
       try {
         const clientExists = await Client.findById(id)
-        if(!clientExists) throw new Error('Cliente no encontrado') 
+        if (!clientExists) throw new Error('Cliente no encontrado')
 
         const { user } = ctx
-        if(String(clientExists.seller) !== String(user?.id)) throw new Error('No tienes las credenciales')
+        if (String(clientExists.seller) !== String(user?.id)) throw new Error('No tienes las credenciales')
 
         return clientExists
-      } catch(error) {
+      } catch (error) {
         console.log("🚀 ~ getClient: ~ error", error)
         throw error
       }
@@ -80,17 +80,17 @@ const resolvers = {
       try {
         const orders = await Order.find({})
         return orders
-      } catch(error) {
+      } catch (error) {
         console.log("🚀 ~ getOrders: ~ error", error)
         throw error
       }
     },
-    getOrdersBySeller: async (_, {}, ctx) => {
+    getOrdersBySeller: async (_, { }, ctx) => {
       try {
-        const { user } = ctx 
+        const { user } = ctx
         const orders = await Order.find({ seller: ObjectId(user?.id) })
         return orders
-      } catch(error) {
+      } catch (error) {
         console.log("🚀 ~ getOrdersBySeller: ~ error", error)
         throw error
       }
@@ -98,104 +98,133 @@ const resolvers = {
     getOrder: async (_, { id }, ctx) => {
       try {
         const orderExists = await Order.findById(id)
-        if(!orderExists) throw new Error('Pedido no encontrado')
+        if (!orderExists) throw new Error('Pedido no encontrado')
 
         const { user } = ctx
-        if(String(orderExists.seller) !== String(user?.id)) throw new Error('No tienes las credenciales')
+        if (String(orderExists.seller) !== String(user?.id)) throw new Error('No tienes las credenciales')
 
         return orderExists
-      } catch(error) {
+      } catch (error) {
         console.log("🚀 ~ getOrder: ~ error", error)
         throw error
       }
     },
-    getOrderByStatus: async (_, { status },  ctx) => {
+    getOrderByStatus: async (_, { status }, ctx) => {
       try {
         const { user } = ctx
-        const orders = await Order.find({ 
+        const orders = await Order.find({
           seller: ObjectId(user?.id),
           status
         })
 
         return orders
-      } catch(error) {
+      } catch (error) {
         console.log("🚀 ~ getOrderByStatus: ~ error", error)
+        throw error
+      }
+    },
+    getBestClients: async () => {
+      try {
+
+        const clients = await Order.aggregate([
+          { $match: { status: 'completed' } },
+          {
+            $group: {
+              _id: "$client",
+              total: { $sum: '$total' }
+            }
+          },
+          {
+            $lookup: {
+              from: 'clients',
+              localField: '_id',
+              foreignField: '_id',
+              as: 'client'
+            }
+          },
+          { $unwind: "$client" },
+          { $sort: { total: -1 } }
+        ])
+
+        return clients
+      } catch (error) {
+        console.log("🚀 ~ getBestClients: ~ error", error)
         throw error
       }
     }
   },
   Mutation: {
     createUser: async (_, { input }) => {
-      try{
+      try {
         const { email, password } = input
 
         // Validar si ya esta registrado
         const userExists = await User.findOne({ email })
-        if(userExists) throw new Error('El usuario ya esta registrado')
-        
+        if (userExists) throw new Error('El usuario ya esta registrado')
+
         // Hashear su password
         const salt = bcryptjs.genSaltSync(10)
-        input.password = bcryptjs.hashSync(password, salt)   
-        
+        input.password = bcryptjs.hashSync(password, salt)
+
         // Save 
         const user = new User(input)
         await user.save()
 
         return user
-      } catch(error) {
+      } catch (error) {
         console.log("🚀 ~ createUser: ~ error", error)
         throw error
       }
     },
     authenticateUser: async (_, { input }) => {
-      try{
+      try {
         // Verificar que el usuario exista
         const { email, password } = input
         const userExists = await User
-        .findOne({ email })
-        if(!userExists) throw new Error('Email o password incorrecto')
+          .findOne({ email })
+        if (!userExists) throw new Error('Email o password incorrecto')
 
         // Verificar el password
         const isCorrectPassword = bcryptjs.compareSync(password, userExists.password)
-        if(!isCorrectPassword) throw new Error('Email o password incorrecto')
+        if (!isCorrectPassword) throw new Error('Email o password incorrecto')
 
         // Generar token
         return {
           token: generateToken(userExists, process.env.SECRET_WORD, '24h')
         }
 
-      } catch(error) {
+      } catch (error) {
         console.log("🚀 ~ authenticateUser: ~ error", error)
         throw error
       }
     },
     createProduct: async (_, { input }) => {
-      try{
+      try {
         const newProduct = new Product(input)
         return await newProduct.save()
-      } catch(error) {
+      } catch (error) {
         console.log("🚀 ~ createProduct: ~ error", error)
         throw error
       }
     },
     updateProduct: async (_, { id, input }) => {
-      try{
+      try {
         let productExists = await Product.findById(id)
-        if(!productExists) throw new Error('Producto no encontrado')        
+        if (!productExists) throw new Error('Producto no encontrado')
         productExists = await Product.findOneAndUpdate({ _id: ObjectId(id) }, input, { new: true })
         return productExists
-      } catch(error) {
+      } catch (error) {
         console.log("🚀 ~ updateProduct:async ~ error", error)
         throw error
       }
     },
     deleteProduct: async (_, { id }) => {
-      try{
+      try {
         const productExists = await Product.findById(id)
-        if(!productExists) throw new Error('Producto no encontrado')
+        if (!productExists) throw new Error('Producto no encontrado')
         await Product.findOneAndDelete({ _id: ObjectId(id) })
         return 'Producto eliminado'
-      } catch(error) {
+      } catch (error) {
         console.log("🚀 ~ deleteProduct:async ~ error", error)
         throw error
       }
@@ -206,13 +235,13 @@ const resolvers = {
         const { email } = input
 
         const clientExists = await Client.findOne({ email })
-        if(clientExists) throw new Error('Ese cliente ya esta registrado')
+        if (clientExists) throw new Error('Ese cliente ya esta registrado')
 
         input.seller = ObjectId(user?.id)
         const client = new Client(input)
 
         return await client.save()
-      } catch(error) {
+      } catch (error) {
         console.log("🚀 ~ createClient:async ~ error", error)
         throw error
       }
@@ -220,14 +249,14 @@ const resolvers = {
     updateClient: async (_, { id, input }, ctx) => {
       try {
         let clientExists = await Client.findById(id)
-        if(!clientExists) throw new Error('Cliente no encontrado')
+        if (!clientExists) throw new Error('Cliente no encontrado')
 
         const { user } = ctx
-        if(String(clientExists.seller) !== String(user?.id)) throw new Error('No tienes las credenciales')
+        if (String(clientExists.seller) !== String(user?.id)) throw new Error('No tienes las credenciales')
 
-        clientExists = await Client.findOneAndUpdate({_id: ObjectId(id)}, input, { new: true })
+        clientExists = await Client.findOneAndUpdate({ _id: ObjectId(id) }, input, { new: true })
         return clientExists
-      } catch(error) {
+      } catch (error) {
         console.log("🚀 ~ updateClient: ~ error", error)
         throw error
       }
@@ -235,10 +264,10 @@ const resolvers = {
     deleteClient: async (_, { id }, ctx) => {
       try {
         let clientExists = await Client.findById(id)
-        if(!clientExists) throw new Error('Cliente no encontrado')
+        if (!clientExists) throw new Error('Cliente no encontrado')
 
         const { user } = ctx
-        if(String(clientExists.seller) !== String(user?.id)) throw new Error('No tienes las credenciales')
+        if (String(clientExists.seller) !== String(user?.id)) throw new Error('No tienes las credenciales')
 
         await Client.findOneAndDelete({ _id: ObjectId(id) })
         return 'Cliente eliminado'
@@ -253,18 +282,18 @@ const resolvers = {
 
         // Verificar cliente
         let clientExists = await Client.findById(client)
-        if(!clientExists) throw new Error('Cliente no encontrado')
+        if (!clientExists) throw new Error('Cliente no encontrado')
 
         // Verificar si el cliente es del vendedor
         const { user } = ctx
-        if(String(clientExists.seller) !== String(user?.id)) throw new Error('No tienes las credenciales')
+        if (String(clientExists.seller) !== String(user?.id)) throw new Error('No tienes las credenciales')
 
         // Verificar si tenemos stock disponible        
         for await (const article of order) {
           const { id, quantity } = article
           const product = await Product.findById(id)
 
-          if(quantity > product.stock) 
+          if (quantity > product.stock)
             throw new Error(`El articulo: ${product.name} excede la cantidad disponible`)
 
           product.stock -= quantity
@@ -275,7 +304,7 @@ const resolvers = {
         input.seller = user?.id
         const newOrder = new Order(input)
         return await newOrder.save()
-      } catch(error) {
+      } catch (error) {
         console.log("🚀 ~ createOrder: ~ error", error)
         throw error
       }
@@ -283,14 +312,14 @@ const resolvers = {
     updateOrder: async (_, { id, input }, ctx) => {
       try {
         const orderExists = await Order.findById(id)
-        if(!orderExists) throw new Error('Pedido no encontrado')
+        if (!orderExists) throw new Error('Pedido no encontrado')
 
-        const { client, order } = input        
+        const { client, order } = input
         const clientExists = await Client.findById(client)
-        if(!clientExists) throw new Error('Cliente no encontrado')
+        if (!clientExists) throw new Error('Cliente no encontrado')
 
         const { user } = ctx
-        if((String(clientExists.seller) !==  String(user?.id)) || (String(orderExists.seller) !== String(user?.id))) 
+        if ((String(clientExists.seller) !== String(user?.id)) || (String(orderExists.seller) !== String(user?.id)))
           throw new Error('No tienes las credenciales')
 
         // Revisar el stock
@@ -298,7 +327,7 @@ const resolvers = {
           const { id, quantity } = article
           const product = await Product.findById(id)
 
-          if(quantity > product.stock) 
+          if (quantity > product.stock)
             throw new Error(`El articulo: ${product.name} excede la cantidad disponible`)
 
           product.stock -= quantity
@@ -307,22 +336,22 @@ const resolvers = {
 
         // Save Order
         return await Order.findOneAndUpdate({ _id: ObjectId(id) }, input, { new: true })
-      } catch(error) {
+      } catch (error) {
         console.log("🚀 ~ updateOrder: ~ error", error)
-        throw error      
+        throw error
       }
     },
     deleteOrder: async (_, { id }, ctx) => {
       try {
         const orderExists = await Order.findById(id)
-        if(!orderExists) throw new Error('Pedido no encontrado')
+        if (!orderExists) throw new Error('Pedido no encontrado')
 
         const { user } = ctx
-        if(String(order.seller) !== String(user?.id)) throw new Error('No tienes las credenciales')
+        if (String(order.seller) !== String(user?.id)) throw new Error('No tienes las credenciales')
 
         await Order.findOneAndDelete({ _id: ObjectId(id) })
         return 'Pedido eliminado'
-      } catch(error) {
+      } catch (error) {
         console.log("🚀 ~ deleteOrder: ~ error", error)
         throw error
       }

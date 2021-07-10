@@ -47,6 +47,11 @@ const typeDefs = gql`
     status: OrderStatus
     createdAt: String
   }
+  
+  type TopCLient {
+    total: Float
+    client: Client
+  }
 
   input UserInput {
     name: String!
@@ -129,6 +134,9 @@ const typeDefs = gql`
     getOrdersBySeller: [Order]
     getOrder(id: ID!): Order
     getOrderByStatus(status: OrderStatus!): [Order]
+
+    # Searches
+    getBestClients: [TopCLient]
   }
 `
 
