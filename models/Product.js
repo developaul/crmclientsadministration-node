@@ -22,4 +22,7 @@ const ProductSchema = Schema({
   }
 })
 
-module.exports = model('Product', ProductSchema) 
+// Permite crear un indice
+ProductSchema.index({ name: 'text' })
+
+module.exports = model('Product', ProductSchema)

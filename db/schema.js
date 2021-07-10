@@ -143,6 +143,7 @@ const typeDefs = gql`
     # Searches
     getBestClients: [TopCLient]
     getBestSellers: [TopSeller]
+    searchProduct(text: String!): [Product]
   }
 `
 

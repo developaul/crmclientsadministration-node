@@ -13,8 +13,6 @@ const generateToken = (user, secretWord, expiresIn) => {
   return jwt.sign({ id, email, name, lastName }, secretWord, { expiresIn })
 }
 
-
-// ctx es un objeto que se comparte con todos los resolvers
 const resolvers = {
   Query: {
     getUser: async (_, { token }) => {
@@ -179,6 +177,15 @@ const resolvers = {
         return sellers
       } catch (error) {
         console.log("🚀 ~ getBestSellers: ~ error", error)
+        throw error
+      }
+    },
+    searchProduct: async (_, { text }) => {
+      try {
+        const products = await Product.find({ $text: { $search: text } }).limit(10)
+        return products
+      } catch (error) {
+        console.log("🚀 ~ searchProduct: ~ error", error)
         throw error
       }
     }
