@@ -125,7 +125,6 @@ const resolvers = {
     },
     getBestClients: async () => {
       try {
-
         const clients = await Order.aggregate([
           { $match: { status: 'completed' } },
           {
@@ -142,13 +141,44 @@ const resolvers = {
               as: 'client'
             }
           },
-          { $unwind: "$client" },
+          { $unwind: '$client' },
+          { $limit: 10 },
           { $sort: { total: -1 } }
         ])
 
         return clients
       } catch (error) {
         console.log("🚀 ~ getBestClients: ~ error", error)
+        throw error
+      }
+    },
+    getBestSellers: async () => {
+      try {
+
+        const sellers = await Order.aggregate([
+          { $match: { status: 'completed' } },
+          {
+            $group: {
+              _id: '$seller',
+              total: { $sum: '$total' }
+            }
+          },
+          {
+            $lookup: {
+              from: 'users',
+              localField: '_id',
+              foreignField: '_id',
+              as: 'seller'
+            }
+          },
+          { $unwind: '$seller' },
+          { $limit: 3 },
+          { $sort: { total: -1 } }
+        ])
+
+        return sellers
+      } catch (error) {
+        console.log("🚀 ~ getBestSellers: ~ error", error)
         throw error
       }
     }
