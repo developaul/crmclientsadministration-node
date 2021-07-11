@@ -1,1 +1,1 @@
-# CRM Crud Graphql App: Node
+# CRM CLIENTS ADMINISTRATION App: Node
