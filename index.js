@@ -11,21 +11,21 @@ const server = new ApolloServer({
   typeDefs,
   resolvers,
   context: ({ req }) => {
-    try{
+    try {
       const token = req.headers['authorization'] || ''
-      if(token) {
-        const user = jwt.verify(token, process.env.SECRET_WORD)
+      if (token) {
+        const user = jwt.verify(token.replace('Bearer ', ''), process.env.SECRET_WORD)
         return {
           user
         }
       }
-    } catch(error) {
+    } catch (error) {
       console.log("🚀 ~ error", error)
       throw error
     }
   }
 })
 
-server.listen().then(({url}) => {
+server.listen().then(({ url }) => {
   console.log(`Servidor listo en ${url}`)
 })

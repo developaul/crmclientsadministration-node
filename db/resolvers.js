@@ -15,9 +15,9 @@ const generateToken = (user, secretWord, expiresIn) => {
 
 const resolvers = {
   Query: {
-    getUser: async (_, { token }) => {
+    getUser: async (_, { }, ctx) => {
       try {
-        const user = jwt.verify(token, process.env.SECRET_WORD)
+        const { user } = ctx
         return user
       } catch (error) {
         console.log("🚀 ~ getUser: ~ error", error)
