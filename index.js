@@ -21,7 +21,7 @@ const server = new ApolloServer({
       }
     } catch (error) {
       console.log("🚀 ~ error", error)
-      throw error
+      // throw error
     }
   }
 })
