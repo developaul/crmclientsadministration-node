@@ -360,16 +360,17 @@ const resolvers = {
           throw new Error('No tienes las credenciales')
 
         // Revisar el stock
-        for await (const article of order) {
-          const { id, quantity } = article
-          const product = await Product.findById(id)
+        if (order)
+          for await (const article of order) {
+            const { id, quantity } = article
+            const product = await Product.findById(id)
 
-          if (quantity > product.stock)
-            throw new Error(`El articulo: ${product.name} excede la cantidad disponible`)
+            if (quantity > product.stock)
+              throw new Error(`El articulo: ${product.name} excede la cantidad disponible`)
 
-          product.stock -= quantity
-          await product.save()
-        }
+            product.stock -= quantity
+            await product.save()
+          }
 
         // Save Order
         return await Order.findOneAndUpdate({ _id: ObjectId(id) }, input, { new: true })
@@ -384,7 +385,7 @@ const resolvers = {
         if (!orderExists) throw new Error('Pedido no encontrado')
 
         const { user } = ctx
-        if (String(order.seller) !== String(user?.id)) throw new Error('No tienes las credenciales')
+        if (String(orderExists.seller) !== String(user?.id)) throw new Error('No tienes las credenciales')
 
         await Order.findOneAndDelete({ _id: ObjectId(id) })
         return 'Pedido eliminado'
