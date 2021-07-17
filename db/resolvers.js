@@ -340,7 +340,8 @@ const resolvers = {
         // Crear pedido
         input.seller = user?.id
         const newOrder = new Order(input)
-        return await newOrder.save()
+        await newOrder.save()
+        return { ...newOrder, client: clientExists }
       } catch (error) {
         console.log("🚀 ~ createOrder: ~ error", error)
         throw error
